@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CSS Size Converter</title>
+<style>
+  :root {
+    --ink: #1a1a17;
+    --paper: #f3f0e7;
+    --line: #d8d2c2;
+    --accent: #c2410c;
+    --panel: #fbf9f3;
+    --muted: #6b6557;
+    --faint: #9a9384;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    background: var(--paper);
+    color: var(--ink);
+    padding: 32px 20px;
+  }
+  .shell { max-width: 720px; margin: 0 auto; }
+  .eyebrow { font-size: 11px; letter-spacing: 3px; color: var(--accent); font-weight: 700; margin-bottom: 8px; }
+  h1 { font-family: Georgia, serif; font-size: 40px; margin: 0; font-weight: 600; letter-spacing: -0.5px; }
+  h2 { font-family: Georgia, serif; font-size: 28px; margin: 0; font-weight: 600; letter-spacing: -0.3px; }
+  .sub { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.5; max-width: 440px; }
+  header { margin-bottom: 28px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .cell {
+    background: var(--paper);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: background .15s;
+  }
+  .cell:focus-within { background: var(--panel); }
+  .cell-top { display: flex; justify-content: space-between; align-items: center; }
+  .unit { font-size: 15px; font-weight: 700; color: var(--accent); }
+  .hint { font-size: 9.5px; color: var(--faint); letter-spacing: 0.3px; }
+  .copy-btn {
+    border: none; background: transparent; color: var(--faint); cursor: pointer;
+    font-family: inherit; font-size: 9.5px; letter-spacing: 0.5px; padding: 2px 4px;
+    text-transform: uppercase;
+  }
+  .copy-btn:hover { color: var(--accent); }
+  .cell input {
+    border: none; background: transparent; font-size: 22px; font-weight: 500;
+    color: var(--ink); width: 100%; outline: none; font-family: inherit; padding: 0;
+  }
+
+  .panel { margin-top: 28px; border: 1px solid var(--line); padding: 20px; background: var(--panel); }
+  .panel-head { font-size: 11px; letter-spacing: 2px; color: var(--muted); font-weight: 700; margin-bottom: 16px; }
+  .ctrl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
+  .ctrl { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-label { font-size: 11px; color: var(--muted); }
+  .ctrl-note { color: var(--accent); font-weight: 700; }
+  .ctrl-wrap {
+    display: flex; align-items: center; border: 1px solid var(--line);
+    background: var(--paper); padding: 6px 10px; gap: 6px;
+  }
+  .ctrl-wrap input {
+    border: none; background: transparent; font-size: 15px; width: 100%;
+    outline: none; font-family: inherit; color: var(--ink); padding: 0;
+  }
+  .ctrl-unit { font-size: 11px; color: var(--faint); }
+  .reset {
+    margin-top: 16px; border: 1px solid var(--ink); background: transparent; color: var(--ink);
+    font-family: inherit; font-size: 12px; padding: 8px 14px; cursor: pointer; letter-spacing: 0.5px;
+  }
+  .reset:hover { background: var(--ink); color: var(--paper); }
+
+  .clamp-section { margin-top: 36px; padding-top: 28px; border-top: 2px solid var(--ink); }
+  .output {
+    margin-top: 18px; display: flex; align-items: stretch; border: 1px solid var(--ink); background: var(--ink);
+  }
+  .output code {
+    flex: 1; color: var(--paper); font-family: inherit; font-size: 13.5px;
+    padding: 14px 16px; overflow-x: auto; white-space: nowrap; line-height: 1.4;
+  }
+  .output-copy {
+    border: none; border-left: 1px solid #3a382f; background: var(--accent); color: #fff;
+    font-family: inherit; font-size: 11px; letter-spacing: 1px; padding: 0 18px;
+    cursor: pointer; text-transform: uppercase;
+  }
+  .clamp-hint { font-size: 11px; color: var(--faint); margin-top: 8px; }
+  .clamp-hint code { color: var(--accent); background: var(--panel); padding: 1px 4px; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="eyebrow">CSS UNITS</div>
+      <h1>Size converter</h1>
+      <p class="sub">Type into any field. Every other unit updates from the same pixel value.</p>
+    </header>
+
+    <div class="grid" id="grid"></div>
+
+    <section class="panel">
+      <div class="panel-head">Reference settings</div>
+      <div class="ctrl-grid" id="ref-controls"></div>
+      <button class="reset" id="reset">Reset to mobile defaults</button>
+    </section>
+
+    <section class="clamp-section">
+      <div class="eyebrow">FLUID TYPOGRAPHY</div>
+      <h2>clamp() generator</h2>
+      <p class="sub">Scales smoothly from the min size at the small viewport up to the max size at the large one. rem values use the root font-size above.</p>
+      <div class="ctrl-grid" id="clamp-controls"></div>
+      <div class="output">
+        <code id="clamp-output">—</code>
+        <button class="output-copy" id="clamp-copy">copy</button>
+      </div>
+      <div class="clamp-hint">Copies as <code>font-size: …;</code></div>
+    </section>
+  </div>
+
+<script>
+  const PT_PER_PX = 1 / 1.3333333;
+
+  const fields = [
+    { key: "px", label: "px", hint: "absolute" },
+    { key: "rem", label: "rem", hint: "root font-size" },
+    { key: "em", label: "em", hint: "parent font-size" },
+    { key: "pt", label: "pt", hint: "96 dpi" },
+    { key: "percent", label: "%", hint: "of parent font-size" },
+    { key: "vw", label: "vw", hint: "of viewport width" },
+    { key: "vh", label: "vh", hint: "of viewport height" },
+  ];
+  const unitSuffix = { px:"px", rem:"rem", em:"em", pt:"pt", percent:"%", vw:"vw", vh:"vh" };
+
+  const state = { px: 16, root: 16, parent: 16, vpW: 390, vpH: 844,
+                  minSize: 16, maxSize: 24, minVp: 390, maxVp: 1920 };
+
+  const trim = (n, p = 4) => { const f = 10 ** p; return Math.round(n * f) / f; };
+
+  function toPx(v, unit) {
+    v = parseFloat(v); if (isNaN(v)) return NaN;
+    switch (unit) {
+      case "px": return v;
+      case "rem": return v * state.root;
+      case "em": return v * state.parent;
+      case "pt": return v / PT_PER_PX;
+      case "percent": return (v / 100) * state.parent;
+      case "vw": return (v / 100) * state.vpW;
+      case "vh": return (v / 100) * state.vpH;
+    }
+  }
+  function fromPx(px, unit) {
+    if (isNaN(px)) return "";
+    switch (unit) {
+      case "px": return px;
+      case "rem": return px / state.root;
+      case "em": return px / state.parent;
+      case "pt": return px * PT_PER_PX;
+      case "percent": return (px / state.parent) * 100;
+      case "vw": return (px / state.vpW) * 100;
+      case "vh": return (px / state.vpH) * 100;
+    }
+  }
+
+  function copy(text, btn) {
+    const done = () => { const t = btn.textContent; btn.textContent = "copied"; setTimeout(() => btn.textContent = t, 1100); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => fallback(text, done));
+    } else fallback(text, done);
+  }
+  function fallback(text, done) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta); done();
+    } catch (e) {}
+  }
+
+  // Build converter grid
+  const grid = document.getElementById("grid");
+  const inputs = {};
+  fields.forEach(f => {
+    const cell = document.createElement("label");
+    cell.className = "cell";
+    cell.innerHTML =
+      '<div class="cell-top"><span class="unit">' + f.label + '</span>' +
+      '<button type="button" class="copy-btn">copy</button></div>' +
+      '<input type="number" placeholder="—" />' +
+      '<span class="hint">' + f.hint + '</span>';
+    const input = cell.querySelector("input");
+    const btn = cell.querySelector(".copy-btn");
+    inputs[f.key] = input;
+    input.addEventListener("input", e => {
+      const px = toPx(e.target.value, f.key);
+      state.px = (e.target.value === "") ? NaN : px;
+      renderFields(f.key);
+    });
+    btn.addEventListener("click", e => {
+      e.preventDefault();
+      const v = inputs[f.key].value;
+      if (v !== "") copy(v + unitSuffix[f.key], btn);
+    });
+    grid.appendChild(cell);
+  });
+
+  function renderFields(skip) {
+    fields.forEach(f => {
+      if (f.key === skip) return;
+      const raw = fromPx(state.px, f.key);
+      inputs[f.key].value = raw === "" ? "" : trim(raw);
+    });
+  }
+
+  // Reusable control builder
+  function makeControl(parent, label, note, key, after) {
+    const wrap = document.createElement("label");
+    wrap.className = "ctrl";
+    wrap.innerHTML =
+      '<div class="ctrl-label">' + label + ' <span class="ctrl-note">' + note + '</span></div>' +
+      '<div class="ctrl-wrap"><input type="number" /><span class="ctrl-unit">px</span></div>';
+    const input = wrap.querySelector("input");
+    input.value = state[key];
+    input.addEventListener("input", e => {
+      state[key] = parseFloat(e.target.value) || 0;
+      renderFields(null);
+      renderClamp();
+      if (after) after();
+    });
+    parent.appendChild(wrap);
+    return input;
+  }
+
+  const refControls = document.getElementById("ref-controls");
+  makeControl(refControls, "Root font-size", "rem", "root");
+  makeControl(refControls, "Parent font-size", "em · %", "parent");
+  makeControl(refControls, "Viewport width", "vw", "vpW");
+  makeControl(refControls, "Viewport height", "vh", "vpH");
+
+  const clampControls = document.getElementById("clamp-controls");
+  makeControl(clampControls, "Min size", "small screen", "minSize");
+  makeControl(clampControls, "Max size", "large screen", "maxSize");
+  makeControl(clampControls, "Min viewport", "start", "minVp");
+  makeControl(clampControls, "Max viewport", "end", "maxVp");
+
+  // Clamp computation
+  const clampOut = document.getElementById("clamp-output");
+  function computeClamp() {
+    const { minSize, maxSize, minVp, maxVp, root } = state;
+    const dVp = maxVp - minVp;
+    if (dVp === 0) return null;
+    const slope = (maxSize - minSize) / dVp;
+    const vw = trim(slope * 100, 4);
+    const interceptPx = minSize - slope * minVp;
+    const interceptRem = trim(interceptPx / root, 4);
+    const lo = trim(Math.min(minSize, maxSize) / root, 4);
+    const hi = trim(Math.max(minSize, maxSize) / root, 4);
+    const sign = interceptRem >= 0 ? "+" : "-";
+    const preferred = (interceptRem === 0 ? "" : Math.abs(interceptRem) + "rem " + sign + " ") + vw + "vw";
+    return "clamp(" + lo + "rem, " + preferred + ", " + hi + "rem)";
+  }
+  function renderClamp() {
+    const c = computeClamp();
+    clampOut.textContent = c || "set distinct viewports";
+  }
+  document.getElementById("clamp-copy").addEventListener("click", e => {
+    const c = computeClamp();
+    if (c) copy("font-size: " + c + ";", e.target);
+  });
+
+  document.getElementById("reset").addEventListener("click", () => {
+    state.root = 16; state.parent = 16; state.vpW = 390; state.vpH = 844;
+    refControls.querySelectorAll("input")[0].value = 16;
+    refControls.querySelectorAll("input")[1].value = 16;
+    refControls.querySelectorAll("input")[2].value = 390;
+    refControls.querySelectorAll("input")[3].value = 844;
+    renderFields(null); renderClamp();
+  });
+
+  // Init
+  state.px = 16;
+  renderFields(null);
+  renderClamp();
+</script>
+</body>
+</html>
